@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.window", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  },
+  "imports": {
+    "preact": "https://esm.sh/preact@10.24.3",
+    "preact/hooks": "https://esm.sh/preact@10.24.3/hooks",
+    "preact/jsx-runtime": "https://esm.sh/preact@10.24.3/jsx-runtime",
+    "gsap": "https://esm.sh/gsap@3.14.2"
+  }
+}
