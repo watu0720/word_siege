@@ -1,4 +1,8 @@
 {
+  "tasks": {
+    "bundle": "deno bundle --import-map=deno.json client/src/main.tsx client/dist/bundle.js",
+    "check": "deno check client/src/main.tsx"
+  },
   "compilerOptions": {
     "lib": ["deno.window", "dom", "dom.iterable"],
     "jsx": "react-jsx",

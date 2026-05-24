@@ -1,7 +1,5 @@
 /** HTTP helpers with typed errors for WORD SIEGE APIs. */
 
-export type WordRow = { word: string; length_category: string };
-
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -46,26 +44,26 @@ export async function requestServerShutdown(): Promise<boolean> {
   }
 }
 
-export async function fetchWords(): Promise<WordRow[]> {
-  const res = await fetch("/api/words");
-  const data = (await parseJson(res)) as { words?: WordRow[]; error?: string; code?: string } | null;
-  if (!res.ok) {
-    const msg = data?.error || "単語リストを取得できませんでした";
-    throw new ApiError(msg, res.status, data?.code);
-  }
-  if (!data?.words?.length) throw new ApiError("単語データが空です", res.status);
-  return data.words;
-}
-
 export type EndlessRankRow = { name: string; score: number; wave: number; date: string };
 export type StoryRankRow = {
   name: string;
   cleared_at: string;
-  accuracy: number;
+  hit_rate?: number;
+  accuracy?: number;
   time_sec: number;
 };
 
-export async function fetchRanking(mode: "endless" | "story"): Promise<EndlessRankRow[] | StoryRankRow[]> {
+export type BossRankRow = {
+  name: string;
+  boss_id: number;
+  difficulty: string;
+  time_sec: number;
+  date: string;
+};
+
+export async function fetchRanking(
+  mode: "endless" | "story" | "boss",
+): Promise<EndlessRankRow[] | StoryRankRow[] | BossRankRow[]> {
   const res = await fetch(`/api/ranking/${mode}`);
   const data = (await parseJson(res)) as { items?: unknown[]; error?: string } | null;
   if (!res.ok) throw new ApiError(data?.error || "ランキング取得エラー", res.status);
@@ -84,22 +82,38 @@ export async function postEndlessRanking(
   });
   const data = (await parseJson(res)) as { items?: EndlessRankRow[]; error?: string } | null;
   if (!res.ok) throw new ApiError(data?.error || "登録に失敗しました", res.status);
-  return data.items || [];
+  return data?.items ?? [];
 }
 
 export async function postStoryRanking(
   name: string,
-  accuracy: number,
+  hit_rate: number,
   time_sec: number,
 ): Promise<StoryRankRow[]> {
   const res = await fetch("/api/ranking/story", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, accuracy, time_sec }),
+    body: JSON.stringify({ name, hit_rate, time_sec }),
   });
   const data = (await parseJson(res)) as { items?: StoryRankRow[]; error?: string } | null;
   if (!res.ok) throw new ApiError(data?.error || "登録に失敗しました", res.status);
-  return data.items || [];
+  return data?.items ?? [];
+}
+
+export async function postBossRushRanking(
+  name: string,
+  time_sec: number,
+  boss_id: number,
+  difficulty: string,
+): Promise<BossRankRow[]> {
+  const res = await fetch("/api/ranking/boss", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, time_sec, boss_id, difficulty }),
+  });
+  const data = (await parseJson(res)) as { items?: BossRankRow[]; error?: string } | null;
+  if (!res.ok) throw new ApiError(data?.error || "登録に失敗しました", res.status);
+  return data?.items ?? [];
 }
 
 export type SavesData = { achievements: string[] };
