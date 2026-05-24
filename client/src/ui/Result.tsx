@@ -1,5 +1,6 @@
 import type { JSX } from "preact";
 import { useEffect, useState } from "preact/hooks";
+import type { BossRushDifficulty } from "../game/monster.ts";
 import { ControlsHelp } from "./ControlsHelp.tsx";
 import { DPad, type Direction } from "./DPad.tsx";
 
@@ -7,10 +8,14 @@ export type ResultPayload = {
   outcome: "gameover" | "ending" | "quit";
   score: number;
   waveReached: number;
-  accuracy: number;
+  hitRate: number;
+  shotsFired: number;
+  hitsLanded: number;
+  /** 整数秒（ストーリー等）。BOSS RUSH クリア時は小数1桁も可 */
   timeSec: number;
-  mode: "story" | "endless";
+  mode: "story" | "endless" | "boss_rush";
   stage: number;
+  bossRush?: { bossId: number; difficulty: BossRushDifficulty };
 };
 
 type Props = {
@@ -19,6 +24,7 @@ type Props = {
   onTitle: () => void;
   onSubmitEndless?: (name: string) => Promise<void>;
   onSubmitStory?: (name: string) => Promise<void>;
+  onSubmitBossRush?: (name: string) => Promise<void>;
 };
 
 const MENU = [
@@ -32,6 +38,7 @@ export function Result({
   onTitle,
   onSubmitEndless,
   onSubmitStory,
+  onSubmitBossRush,
 }: Props): JSX.Element {
   const [i, setI] = useState(0);
   const [name, setName] = useState("AAA");
@@ -40,7 +47,9 @@ export function Result({
   const [err, setErr] = useState<string | null>(null);
 
   const showEndlessSubmit = data.outcome === "gameover" && data.mode === "endless" && onSubmitEndless;
-  const showStorySubmit = data.outcome === "ending" && onSubmitStory;
+  const showStorySubmit = data.outcome === "ending" && data.mode === "story" && onSubmitStory;
+  const showBossSubmit =
+    data.outcome === "ending" && data.mode === "boss_rush" && onSubmitBossRush;
 
   const move = (d: Direction) => {
     if (d === "up") setI((x) => (x - 1 + MENU.length) % MENU.length);
@@ -78,6 +87,8 @@ export function Result({
         await onSubmitEndless(n);
       } else if (showStorySubmit && onSubmitStory) {
         await onSubmitStory(n);
+      } else if (showBossSubmit && onSubmitBossRush) {
+        await onSubmitBossRush(n);
       }
       setSubmitted(true);
     } catch (e) {
@@ -89,7 +100,11 @@ export function Result({
 
   const title =
     data.outcome === "ending"
-      ? "STORY 全クリア！"
+      ? data.mode === "boss_rush"
+        ? "BOSS RUSH クリア！"
+        : data.mode === "story"
+        ? `STAGE ${data.stage} クリア！`
+        : "STORY クリア！"
       : data.outcome === "quit"
       ? "中断"
       : "GAME OVER";
@@ -101,13 +116,26 @@ export function Result({
         <div>到達ウェーブ: {data.waveReached}</div>
         <div>スコア: {data.score}</div>
         <div>
-          正確率:{" "}
-          {data.accuracy > 0 ? `${(data.accuracy * 100).toFixed(1)}%` : "—"}
+          命中率:{" "}
+          {data.shotsFired > 0 ? `${(data.hitRate * 100).toFixed(1)}%` : "—"}
         </div>
-        {data.mode === "story" ? <div>プレイ時間: {data.timeSec}s</div> : null}
+        {data.mode === "boss_rush" && data.bossRush ? (
+          <>
+            <div>
+              BOSS {data.bossRush.bossId} · {data.bossRush.difficulty.toUpperCase()}
+            </div>
+            <div>クリアタイム: {data.timeSec.toFixed(1)}s</div>
+          </>
+        ) : null}
+        {data.mode === "story" ? (
+          <>
+            <div>ステージ: {data.stage}</div>
+            <div>プレイ時間: {data.timeSec}s</div>
+          </>
+        ) : null}
       </div>
 
-      {(showEndlessSubmit || showStorySubmit) && !submitted ? (
+      {(showEndlessSubmit || showStorySubmit || showBossSubmit) && !submitted ? (
         <div class="mb-6 flex flex-col items-center gap-2 w-full max-w-xs">
           <label class="text-sm text-slate-400">名前（英大文字・最大8）</label>
           <input

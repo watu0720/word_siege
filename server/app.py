@@ -1,7 +1,6 @@
 """WORD SIEGE Flask app: static client + JSON APIs."""
 from __future__ import annotations
 
-import csv
 import logging
 import os
 import sys
@@ -17,8 +16,6 @@ from routes import saves as saves_routes
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 CLIENT = ROOT / "client"
-WORDS_CSV = DATA / "words.csv"
-
 logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger("word_siege")
 
@@ -78,33 +75,9 @@ def api_shutdown():
     return jsonify({"ok": True})
 
 
-@app.route("/api/words")
-def api_words():
-    if not WORDS_CSV.is_file():
-        return jsonify({"error": "words.csv not found", "code": "WORDS_MISSING"}), 404
-    rows = []
-    try:
-        with WORDS_CSV.open(encoding="utf-8", newline="") as f:
-            reader = csv.DictReader(f)
-            if not reader.fieldnames or "word" not in reader.fieldnames:
-                return jsonify({"error": "invalid csv header"}), 400
-            for row in reader:
-                w = (row.get("word") or "").strip()
-                if not w:
-                    continue
-                cat = (row.get("length_category") or "short").strip().lower()
-                rows.append({"word": w, "length_category": cat})
-    except OSError as e:
-        LOG.exception("read words")
-        return jsonify({"error": str(e)}), 500
-    if not rows:
-        return jsonify({"error": "no words in csv"}), 400
-    return jsonify({"words": rows})
-
-
 @app.route("/api/ranking/<mode>", methods=["GET"])
 def get_ranking(mode):
-    if mode not in ("endless", "story"):
+    if mode not in ("endless", "story", "boss"):
         return jsonify({"error": "invalid mode"}), 400
     path = DATA / "ranking.json"
     items = ranking_routes.get_ranking(path, mode)
@@ -113,7 +86,7 @@ def get_ranking(mode):
 
 @app.route("/api/ranking/<mode>", methods=["POST"])
 def post_ranking(mode):
-    if mode not in ("endless", "story"):
+    if mode not in ("endless", "story", "boss"):
         return jsonify({"error": "invalid mode"}), 400
     body = request.get_json(silent=True) or {}
     try:

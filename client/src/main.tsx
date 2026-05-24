@@ -1,15 +1,15 @@
 import { render } from "preact";
 import type { JSX } from "preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
-import type { WordRow } from "./api/client.ts";
 import {
-  ApiError,
   fetchHealth,
-  fetchWords,
   pingServer,
+  postBossRushRanking,
   postEndlessRanking,
   postStoryRanking,
 } from "./api/client.ts";
+import type { BossRushDifficulty } from "./game/monster.ts";
+import { BossRushSelect } from "./ui/BossRushSelect.tsx";
 import { GamePlay } from "./ui/Game.tsx";
 import type { ResultPayload } from "./ui/Result.tsx";
 import { Result } from "./ui/Result.tsx";
@@ -20,13 +20,21 @@ import { Title } from "./ui/Title.tsx";
 type Screen =
   | { t: "title" }
   | { t: "stage" }
+  | { t: "boss_rush_select" }
   | { t: "ranking" }
-  | { t: "game"; mode: "story" | "endless"; stage: number }
+  | { t: "game"; mode: "story"; stage: number }
+  | { t: "game"; mode: "endless"; stage: number }
+  | {
+      t: "game";
+      mode: "boss_rush";
+      stage: number;
+      bossRush: { bossId: number; difficulty: BossRushDifficulty };
+    }
   | { t: "result"; data: ResultPayload };
 
 export function App(): JSX.Element {
   const [screen, setScreen] = useState<Screen>({ t: "title" });
-  const [words, setWords] = useState<WordRow[] | null>(null);
+  const [ready, setReady] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [gameKey, setGameKey] = useState(0);
 
@@ -48,22 +56,9 @@ export function App(): JSX.Element {
         }
         return;
       }
-      try {
-        const w = await fetchWords();
-        if (!cancelled) {
-          setWords(w);
-          setLoadErr(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          if (e instanceof ApiError && e.code === "WORDS_MISSING") {
-            setLoadErr(
-              "単語ファイル（data/words.csv）が見つかりません。ゲームを起動できません。",
-            );
-          } else {
-            setLoadErr((e as Error).message || "読み込みに失敗しました");
-          }
-        }
+      if (!cancelled) {
+        setReady(true);
+        setLoadErr(null);
       }
     })();
     return () => {
@@ -73,17 +68,28 @@ export function App(): JSX.Element {
 
   const goTitle = useCallback(() => setScreen({ t: "title" }), []);
 
-  const onTitlePick = useCallback((id: "story" | "endless" | "ranking") => {
+  const onTitlePick = useCallback((id: "story" | "endless" | "boss_rush" | "ranking") => {
     if (id === "story") setScreen({ t: "stage" });
     else if (id === "endless") {
       setGameKey((k) => k + 1);
       setScreen({ t: "game", mode: "endless", stage: 1 });
-    } else setScreen({ t: "ranking" });
+    } else if (id === "boss_rush") setScreen({ t: "boss_rush_select" });
+    else setScreen({ t: "ranking" });
   }, []);
 
   const onStage = useCallback((stage: number) => {
     setGameKey((k) => k + 1);
     setScreen({ t: "game", mode: "story", stage });
+  }, []);
+
+  const onBossRushStart = useCallback((bossId: number, difficulty: BossRushDifficulty) => {
+    setGameKey((k) => k + 1);
+    setScreen({
+      t: "game",
+      mode: "boss_rush",
+      stage: 1,
+      bossRush: { bossId, difficulty },
+    });
   }, []);
 
   const onGameFinish = useCallback((data: ResultPayload) => {
@@ -95,8 +101,14 @@ export function App(): JSX.Element {
     if (!r) return;
     setGameKey((k) => k + 1);
     if (r.mode === "endless") setScreen({ t: "game", mode: "endless", stage: 1 });
-    else if (r.outcome === "ending") setScreen({ t: "game", mode: "story", stage: 1 });
-    else setScreen({ t: "game", mode: "story", stage: r.stage });
+    else if (r.mode === "boss_rush" && r.bossRush) {
+      setScreen({
+        t: "game",
+        mode: "boss_rush",
+        stage: 1,
+        bossRush: r.bossRush,
+      });
+    } else setScreen({ t: "game", mode: "story", stage: r.stage });
   }, [screen]);
 
   if (loadErr) {
@@ -107,7 +119,7 @@ export function App(): JSX.Element {
     );
   }
 
-  if (!words) {
+  if (!ready) {
     return (
       <div class="min-h-screen bg-slate-950 text-slate-300 flex items-center justify-center">
         読み込み中…
@@ -121,6 +133,9 @@ export function App(): JSX.Element {
   if (screen.t === "stage") {
     return <StageSelect onSelect={onStage} onBack={goTitle} />;
   }
+  if (screen.t === "boss_rush_select") {
+    return <BossRushSelect onStart={onBossRushStart} onBack={goTitle} />;
+  }
   if (screen.t === "ranking") {
     return <RankingView onBack={goTitle} />;
   }
@@ -128,10 +143,13 @@ export function App(): JSX.Element {
     return (
       <GamePlay
         key={gameKey}
-        words={words}
         mode={screen.mode}
         startStage={screen.stage}
+        bossRush={screen.mode === "boss_rush" ? screen.bossRush : undefined}
         onFinish={onGameFinish}
+        onBossRushRetry={
+          screen.mode === "boss_rush" ? () => setGameKey((k) => k + 1) : undefined
+        }
       />
     );
   }
@@ -151,7 +169,26 @@ export function App(): JSX.Element {
         onSubmitStory={
           screen.data.mode === "story" && screen.data.outcome === "ending"
             ? async (name) => {
-                await postStoryRanking(name, screen.data.accuracy, screen.data.timeSec);
+                await postStoryRanking(
+                  name,
+                  screen.data.hitRate,
+                  Math.floor(screen.data.timeSec),
+                );
+              }
+            : undefined
+        }
+        onSubmitBossRush={
+          screen.data.mode === "boss_rush" &&
+          screen.data.outcome === "ending" &&
+          screen.data.bossRush
+            ? async (name) => {
+                const br = screen.data.bossRush!;
+                await postBossRushRanking(
+                  name,
+                  screen.data.timeSec,
+                  br.bossId,
+                  br.difficulty,
+                );
               }
             : undefined
         }

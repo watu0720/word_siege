@@ -7,11 +7,12 @@ import { DPad, type Direction } from "./DPad.tsx";
 const ITEMS = [
   { id: "story" as const, label: "STORY MODE" },
   { id: "endless" as const, label: "ENDLESS MODE" },
+  { id: "boss_rush" as const, label: "BOSS RUSH" },
   { id: "ranking" as const, label: "RANKING" },
 ];
 
 type Props = {
-  onPick: (id: "story" | "endless" | "ranking") => void;
+  onPick: (id: "story" | "endless" | "boss_rush" | "ranking") => void;
 };
 
 export function Title({ onPick }: Props): JSX.Element {

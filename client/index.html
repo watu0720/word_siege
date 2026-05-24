@@ -13,11 +13,163 @@
       };
     </script>
     <style>
-      html,
-      body {
-        margin: 0;
+      html {
+        margin: 0 auto;
         min-height: 100%;
         background: #020617;
+      }
+      body {
+        margin: 0 auto;
+        width: 1008px;
+        max-width: 100%;
+        min-height: 100%;
+        background: #020617;
+        overflow-x: hidden;
+      }
+      #root {
+        min-height: 100vh;
+      }
+      @keyframes player-hurt-blink {
+        0%,
+        45% {
+          opacity: 1;
+        }
+        50%,
+        95% {
+          opacity: 0.22;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+      .player-iframes-blink {
+        animation: player-hurt-blink 0.14s steps(1, end) infinite;
+      }
+
+      /* boss_burger 特殊弾 — 追加アニメーション */
+      @keyframes boss-burger-trail-outer-breathe {
+        0%,
+        100% {
+          opacity: 0.4;
+          filter: blur(5px) saturate(1);
+        }
+        50% {
+          opacity: 0.82;
+          filter: blur(8px) saturate(1.35);
+        }
+      }
+      .boss-burger-trail-outer-animate {
+        animation: boss-burger-trail-outer-breathe 2.1s ease-in-out infinite;
+      }
+
+      @keyframes boss-burger-trail-mid-flow {
+        0%,
+        100% {
+          opacity: 0.58;
+        }
+        33% {
+          opacity: 0.92;
+        }
+        66% {
+          opacity: 0.72;
+        }
+      }
+      .boss-burger-trail-mid-animate {
+        animation: boss-burger-trail-mid-flow 1.25s ease-in-out infinite;
+      }
+
+      @keyframes boss-burger-spark-twinkle {
+        0%,
+        100% {
+          opacity: 0.25;
+          transform: translate(-50%, -50%) scale(0.55);
+          filter: brightness(0.85);
+        }
+        40% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1.2);
+          filter: brightness(1.35);
+        }
+        55% {
+          opacity: 0.95;
+          transform: translate(-50%, -50%) scale(1.05);
+          filter: brightness(1.2);
+        }
+      }
+      .boss-burger-spark-animate {
+        animation: boss-burger-spark-twinkle 0.62s ease-in-out infinite;
+      }
+
+      @keyframes boss-burger-trail-core-pulse {
+        0%,
+        100% {
+          opacity: 0.82;
+          filter: blur(1.5px) drop-shadow(0 0 8px rgba(250, 204, 21, 0.65));
+        }
+        50% {
+          opacity: 1;
+          filter: blur(2px) drop-shadow(0 0 18px rgba(251, 191, 36, 0.98));
+        }
+      }
+      .boss-burger-trail-core-animate {
+        animation: boss-burger-trail-core-pulse 0.85s ease-in-out infinite;
+      }
+
+      @keyframes boss-burger-aura-fade {
+        0%,
+        100% {
+          opacity: 0.52;
+          filter: brightness(1);
+        }
+        50% {
+          opacity: 0.95;
+          filter: brightness(1.18);
+        }
+      }
+      .boss-burger-aura-fade-wrap {
+        animation: boss-burger-aura-fade 2.3s ease-in-out infinite;
+      }
+      .boss-burger-aura-fade-wrap--alt {
+        animation: boss-burger-aura-fade 2.3s ease-in-out infinite;
+        animation-delay: 0.45s;
+      }
+
+      @keyframes boss-burger-aura-rotate-cw {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes boss-burger-aura-rotate-ccw {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(-360deg);
+        }
+      }
+      .boss-burger-aura-ring-outer {
+        animation: boss-burger-aura-rotate-cw 6.5s linear infinite;
+      }
+      .boss-burger-aura-ring-inner {
+        animation: boss-burger-aura-rotate-ccw 4.2s linear infinite;
+      }
+
+      @keyframes boss-burger-sprite-glow {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.75))
+            drop-shadow(0 0 22px rgba(251, 146, 60, 0.35));
+        }
+        50% {
+          filter: drop-shadow(0 0 16px rgba(254, 243, 199, 0.95))
+            drop-shadow(0 0 32px rgba(251, 191, 36, 0.6));
+        }
+      }
+      .boss-burger-sprite-glow-animate {
+        animation: boss-burger-sprite-glow 1.15s ease-in-out infinite;
       }
     </style>
   </head>
